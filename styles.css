@@ -6,3 +6,71 @@ available in the app when your plugin is enabled.
 If your plugin does not need CSS, delete this file.
 
 */
+
+.modal {
+	padding: 16px; /* 전체 패딩 */
+	box-sizing: border-box;
+}
+
+.modal h2 {
+	margin-bottom: 16px; /* 제목 아래 여백 */
+}
+
+.modal input,
+.modal select,
+.modal button {
+	margin: 8px 0;
+	padding: 6px 10px;
+	box-sizing: border-box;
+	border: 1px solid #ccc;
+	text-align: center;
+	font-size: 14px;
+	outline: none;
+	box-shadow: none;
+	transition: all 0.3s ease; /* 부드러운 전환 효과 */
+}
+.modal button {
+	width: 60px; /* 버튼 너비 */
+	line-height: 0.8;
+}
+
+.modal select:focus,
+.modal button:focus {
+	outline: none;
+	box-shadow: none;
+}
+
+.modal select:hover,
+.modal button:hover {
+	background-color: rgba(0, 123, 255, 0.5) !important;
+	color: white;
+	border: 1px solid rgba(0, 123, 255, 0.5);
+}
+
+.modal input:focus {
+	border-color: #007bff; /* 포커스 시 테두리 색상 */
+	box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* 포커스 시 그림자 효과 */
+}
+
+.modal input {
+	text-align: left;
+}
+
+/* select와 button은 inline-block으로 가로 배치될 수 있게 */
+.modal select,
+.modal button {
+	display: inline-block;
+	margin-right: 8px;
+}
+
+/* button hover 효과 */
+.modal button:hover {
+	background-color: #f0f0f0;
+	cursor: pointer;
+}
+
+/* result div spacing */
+.modal .bible-verse-result {
+	margin-top: 16px;
+	white-space: pre-wrap; /* 결과 줄바꿈 유지 */
+}
