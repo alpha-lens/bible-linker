@@ -4,6 +4,6 @@
 	"version": "0.1.0",
 	"author": "alpha-lens",
 	"description": "성경 절 링크 플러그인",
-	"main": "main.ts",
+	"main": "main.js",
 	"minAppVersion": "0.12.0"
 }
