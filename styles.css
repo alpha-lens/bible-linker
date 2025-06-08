@@ -43,7 +43,6 @@ If your plugin does not need CSS, delete this file.
 .modal select:hover,
 .modal button:hover {
 	background-color: rgba(0, 123, 255, 0.5) !important;
-	color: white;
 	border: 1px solid rgba(0, 123, 255, 0.5);
 }
 

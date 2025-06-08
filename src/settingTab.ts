@@ -44,21 +44,6 @@ export class BibleLinkerSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
-			.setName("출력 형식")
-			.setDesc("성경 절 출력 형식을 선택하세요.")
-			.addDropdown((dropdown) => {
-				dropdown
-					.addOption("inline", "한 줄로 출력 (기본)")
-					.addOption("verseBlock", "절 단위 블록")
-					.addOption("callout", "Callout")
-					.setValue(this.plugin.settings.outputFormat)
-					.onChange(async (value: OutputFormat) => {
-						this.plugin.settings.outputFormat = value;
-						await this.plugin.saveSettings();
-					});
-			});
-
 		if (settings.multiVersion) {
 			new Setting(containerEl)
 				.setName("역본 목록")
@@ -75,19 +60,21 @@ export class BibleLinkerSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						})
 				);
-		} else {
-			new Setting(containerEl)
-				.setName("기본 역본")
-				.setDesc("기본 성경 역본")
-				.addText((text) =>
-					text
-						.setPlaceholder("개역개정")
-						.setValue(settings.defaultVersion)
-						.onChange(async (value) => {
-							settings.defaultVersion = value.trim();
-							await this.plugin.saveSettings();
-						})
-				);
 		}
+
+		new Setting(containerEl)
+			.setName("출력 형식")
+			.setDesc("성경 절 출력 형식을 선택하세요.")
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption("inline", "한 줄로 출력 (기본)")
+					.addOption("verseBlock", "절 단위 블록")
+					.addOption("callout", "Callout")
+					.setValue(this.plugin.settings.outputFormat)
+					.onChange(async (value: OutputFormat) => {
+						this.plugin.settings.outputFormat = value;
+						await this.plugin.saveSettings();
+					});
+			});
 	}
 }
