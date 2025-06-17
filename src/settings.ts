@@ -3,6 +3,8 @@ export interface BibleLinkerSettings {
 	defaultVersion: string;
 	multiVersion: boolean;
 	versions: string[];
+	outputFormat: OutputFormat;
+	addNewlineAfterInsert: boolean;
 }
 
 export const DEFAULT_SETTINGS: BibleLinkerSettings = {
@@ -11,6 +13,7 @@ export const DEFAULT_SETTINGS: BibleLinkerSettings = {
 	multiVersion: false,
 	versions: [],
 	outputFormat: "inline",
+	addNewlineAfterInsert: false, // 👈 추가!
 };
 
 export type OutputFormat = "inline" | "verseBlock" | "callout";

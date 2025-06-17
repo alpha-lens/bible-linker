@@ -1,6 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import { BibleLinkerSettings, OutputFormat } from "./settings";
-import { parseVerses, findVerseContent } from "./utils";
+import { OutputFormat } from "./settings";
 import BibleLinkerPlugin from "../main";
 
 export class BibleLinkerSettingTab extends PluginSettingTab {
@@ -41,6 +40,17 @@ export class BibleLinkerSettingTab extends PluginSettingTab {
 						settings.multiVersion = value;
 						await this.plugin.saveSettings();
 						this.display();
+					})
+			);
+		new Setting(containerEl)
+			.setName("본문 삽입 후 줄바꿈 추가")
+			.setDesc("본문 삽입 후 줄바꿈을 추가할지 여부를 설정합니다.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.addNewlineAfterInsert)
+					.onChange(async (value) => {
+						this.plugin.settings.addNewlineAfterInsert = value;
+						await this.plugin.saveSettings();
 					})
 			);
 

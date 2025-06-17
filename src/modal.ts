@@ -74,6 +74,7 @@ const BOOK_NAME_MAP: Record<string, string> = {
 export class BibleLinkerModal extends Modal {
 	settings: BibleLinkerSettings;
 	editor: Editor;
+	lastResult = "";
 
 	constructor(app: App, editor: Editor, settings: BibleLinkerSettings) {
 		super(app);
@@ -83,18 +84,18 @@ export class BibleLinkerModal extends Modal {
 
 	async onOpen() {
 		const { contentEl } = this;
+		contentEl.addClass("bible-linker-modal");
+
 		contentEl.createEl("h2", { text: "성경 절 찾기" });
 
-		// 다중 역본일 때만 드롭다운 생성
+		// 다중 역본
 		let versionSelect: HTMLSelectElement | null = null;
 		if (this.settings.multiVersion && this.settings.versions.length > 0) {
 			versionSelect = contentEl.createEl("select");
 			this.settings.versions.forEach((v) => {
-				if (versionSelect) {
-					const option = document.createElement("option");
-					option.text = v;
-					versionSelect.appendChild(option);
-				}
+				const option = document.createElement("option");
+				option.text = v;
+				versionSelect?.appendChild(option);
 			});
 		}
 
@@ -120,111 +121,169 @@ export class BibleLinkerModal extends Modal {
 		});
 
 		const resultDiv = contentEl.createEl("div");
+		resultDiv.classList.add("bible-verse-result");
 		resultDiv.style.marginTop = "1em";
 
 		const insertButton = contentEl.createEl("button", { text: "삽입" });
 		insertButton.style.marginTop = "1em";
 		insertButton.disabled = true;
 
-		let lastResult = "";
+		// 자동 업데이트
+		input.addEventListener("input", async () => {
+			await this.updateResult(
+				input,
+				resultDiv,
+				formatSelect,
+				versionSelect,
+				insertButton
+			);
+		});
 
+		// 엔터 키 삽입
 		input.addEventListener("keydown", async (event) => {
 			if (event.key === "Enter") {
-				const verseInput = input.value.trim();
-				const parsed = parseVerses(verseInput);
-				if (!parsed) {
-					new Notice("올바른 형식이 아닙니다. 예: 창1:1-2");
-					return;
-				}
-
-				const { book, chapter, verses } = parsed;
-				const bookName = BOOK_NAME_MAP[book] || book;
-
-				let selectedVersion = versionSelect
-					? versionSelect.value
-					: this.settings.defaultVersion;
-
-				const filePath = this.settings.multiVersion
-					? `${this.settings.bibleRoot}/${selectedVersion}/${book}/${book}${chapter}.md`
-					: `${this.settings.bibleRoot}/${book}/${book}${chapter}.md`;
-
-				const file = this.app.vault.getAbstractFileByPath(filePath);
-				if (!(file instanceof TFile)) {
-					new Notice(`파일을 찾을 수 없습니다: ${filePath}`);
-					return;
-				}
-
-				try {
-					const content = await this.app.vault.read(file);
-					const results = verses.map((verse) => {
-						const verseContent = findVerseContent(content, verse);
-						return verseContent
-							? `${book}${chapter}:${verse} ${verseContent}`
-							: `${book}${chapter}:${verse} (본문 없음)`;
-					});
-
-					const outputFormat = formatSelect.value as OutputFormat;
-
-					switch (outputFormat) {
-						case "inline":
-							lastResult =
-								`${bookName} ${chapter}장\n` +
-								results
-									.map((r) => {
-										const colonIdx = r.indexOf(":");
-										return colonIdx !== -1
-											? r.slice(colonIdx + 1).trim()
-											: r;
-									})
-									.join(" ");
-							break;
-						case "verseBlock":
-							lastResult =
-								`${bookName} ${chapter}장\n` +
-								results
-									.map((r) => {
-										const colonIdx = r.indexOf(":");
-										return colonIdx !== -1
-											? r.slice(colonIdx + 1).trim()
-											: r;
-									})
-									.join("\n");
-							break;
-						case "callout":
-							lastResult =
-								`>[!note]+ ${bookName} ${chapter}장\n` +
-								results
-									.map((r) => {
-										const colonIdx = r.indexOf(":");
-										return colonIdx !== -1
-											? `> ${r
-													.slice(colonIdx + 1)
-													.trim()}`
-											: `> ${r}`;
-									})
-									.join("\n");
-							break;
+				event.preventDefault();
+				if (this.lastResult) {
+					this.insertResult(this.lastResult);
+				} else {
+					await this.updateResult(
+						input,
+						resultDiv,
+						formatSelect,
+						versionSelect,
+						insertButton
+					);
+					if (this.lastResult) {
+						this.insertResult(this.lastResult);
 					}
-
-					resultDiv.innerText = lastResult;
-					insertButton.disabled = false;
-				} catch (err) {
-					console.error(err);
-					new Notice("파일을 읽는 도중 오류가 발생했습니다.");
 				}
 			}
 		});
 
 		insertButton.addEventListener("click", () => {
-			if (lastResult) {
-				this.editor.replaceRange(lastResult, this.editor.getCursor());
-				new Notice("본문이 삽입되었습니다.");
-				this.close();
+			if (this.lastResult) {
+				this.insertResult(this.lastResult);
 			}
 		});
 
 		// input 기본 포커스
 		setTimeout(() => input.focus(), 0);
+	}
+
+	async updateResult(
+		input: HTMLInputElement,
+		resultDiv: HTMLElement,
+		formatSelect: HTMLSelectElement,
+		versionSelect: HTMLSelectElement | null,
+		insertButton: HTMLButtonElement
+	) {
+		const verseInput = input.value.trim();
+		const parsed = parseVerses(verseInput);
+
+		if (!parsed) {
+			resultDiv.innerText = "올바른 형식이 아닙니다. 예: 창1:1-2";
+			insertButton.disabled = true;
+			this.lastResult = "";
+			return;
+		}
+
+		const { book, chapter, verses } = parsed;
+		const bookName = BOOK_NAME_MAP[book] || book;
+		const selectedVersion = versionSelect
+			? versionSelect.value
+			: this.settings.defaultVersion;
+		const filePath = this.settings.multiVersion
+			? `${this.settings.bibleRoot}/${selectedVersion}/${book}/${book}${chapter}.md`
+			: `${this.settings.bibleRoot}/${book}/${book}${chapter}.md`;
+
+		const file = this.app.vault.getAbstractFileByPath(filePath);
+		if (!(file instanceof TFile)) {
+			resultDiv.innerText = `파일을 찾을 수 없습니다: ${filePath}`;
+			insertButton.disabled = true;
+			this.lastResult = "";
+			return;
+		}
+
+		try {
+			const content = await this.app.vault.read(file);
+			const results = verses.map((verse) => {
+				const verseContent = findVerseContent(content, verse);
+				return verseContent
+					? `${book}${chapter}:${verse} ${verseContent}`
+					: ``;
+			});
+
+			const outputFormat = formatSelect.value as OutputFormat;
+			switch (outputFormat) {
+				case "inline":
+					this.lastResult =
+						`${bookName} ${chapter}장\n` +
+						results
+							.map((r) => {
+								const colonIdx = r.indexOf(":");
+								return colonIdx !== -1
+									? r.slice(colonIdx + 1).trim()
+									: r;
+							})
+							.join(" ");
+					break;
+				case "verseBlock":
+					this.lastResult =
+						`${bookName} ${chapter}장\n` +
+						results
+							.map((r) => {
+								const colonIdx = r.indexOf(":");
+								return colonIdx !== -1
+									? r.slice(colonIdx + 1).trim()
+									: r;
+							})
+							.join("\n");
+					break;
+				case "callout":
+					this.lastResult =
+						`>[!note]+ ${bookName} ${chapter}장\n` +
+						results
+							.map((r) => {
+								const colonIdx = r.indexOf(":");
+								return colonIdx !== -1
+									? `> ${r.slice(colonIdx + 1).trim()}`
+									: `> ${r}`;
+							})
+							.join("\n");
+					break;
+			}
+
+			resultDiv.innerText = this.lastResult;
+			insertButton.disabled = false;
+		} catch (err) {
+			console.error(err);
+			resultDiv.innerText = "파일을 읽는 도중 오류가 발생했습니다.";
+			insertButton.disabled = true;
+			this.lastResult = "";
+		}
+	}
+
+	insertResult(result: string) {
+		const cursor = this.editor.getCursor();
+		// 1. 현재 커서 위치에 result 삽입
+		this.editor.replaceRange(result, cursor);
+
+		// 2. 삽입된 내용의 마지막 라인 번호 계산
+		const insertedLines = result.split("\n").length;
+		const newCursorLine = cursor.line + insertedLines - 1;
+		const newCursorCh = this.editor.getLine(newCursorLine).length;
+
+		// 3. 마지막 줄 끝에 두 줄 개행 추가
+		this.editor.replaceRange("\n\n", {
+			line: newCursorLine,
+			ch: newCursorCh,
+		});
+
+		// 4. 커서를 개행 아래로 이동
+		this.editor.setCursor({ line: newCursorLine + 2, ch: 0 });
+
+		new Notice("본문이 삽입되었습니다.");
+		this.close();
 	}
 
 	onClose() {
